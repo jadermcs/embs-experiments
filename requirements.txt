@@ -6,5 +6,5 @@ torch==1.13.1
 numpy
 datasets
 tqdm
-nltk
 mlflow
+pyro-ppl
