@@ -3,8 +3,9 @@ import argparse
 import time
 import math
 import torch
-import torch.nn as nn
 
+import torch.nn as nn
+from torch.nn import functional as F
 from torch.optim import AdamW
 
 import data
@@ -25,7 +26,7 @@ parser.add_argument('--clip', type=float, default=0.25,
                     help='gradient clipping')
 parser.add_argument('--epochs', type=int, default=40,
                     help='upper epoch limit')
-parser.add_argument('--batch_size', type=int, default=32, metavar='N',
+parser.add_argument('--batch_size', type=int, default=64, metavar='N',
                     help='batch size')
 parser.add_argument('--bptt', type=int, default=128,
                     help='sequence length')
@@ -116,6 +117,16 @@ else:
 
 criterion = nn.NLLLoss()
 
+
+def kl_criterion(output, targets, mu, var):
+    NLL = F.nll_loss(output, targets)
+    # see Appendix B from VAE paper:
+    # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
+    # https://arxiv.org/abs/1312.6114
+    # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
+    KLD = -0.5 * torch.sum(1 + torch.log(var) - mu.pow(2) - var)
+
+    return NLL + KLD
 ###############################################################################
 # Training code
 ###############################################################################
@@ -175,8 +186,12 @@ def train():
         # If we didn't, the model would try backpropagating all the way to start of the dataset.
         model.zero_grad()
         hidden = repackage_hidden(hidden)
-        output, hidden = model(data, hidden)
-        loss = criterion(output, targets)
+        if not args.vae:
+            output, hidden = model(data, hidden)
+            loss = criterion(output, targets)
+        else:
+            output, hidden, mu, var = model(data, hidden)
+            loss = kl_criterion(output, targets, mu, var)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
         optimizer.step()
@@ -189,7 +204,9 @@ def train():
             print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.5f} | ms/batch {:5.2f} | '
                     'loss {:5.2f} | ppl {:8.2f}'.format(
                 epoch, batch, len(train_data) // args.bptt, args.lr,
-                elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss)))
+                elapsed * 1000 / args.log_interval, cur_loss, 
+                cur_loss #math.exp(cur_loss)
+                ))
             total_loss = 0
             start_time = time.time()
         if args.dry_run:
