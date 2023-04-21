@@ -232,8 +232,10 @@ try:
         print('-' * 89)
         # Save the model if the validation loss is the best we've seen so far.
         if not best_val_loss or val_loss < best_val_loss:
-            with open(args.save, 'wb') as f:
-                torch.save(model, f)
+            if not args.vae:
+                torch.save(model, args.path+"model.pth")
+            else:
+                torch.save(model, args.path+"vae_model.pth")
             best_val_loss = val_loss
         else:
             # Anneal the learning rate if no improvement has been seen in the validation dataset.
@@ -248,9 +250,3 @@ print('=' * 89)
 print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
     test_loss, math.exp(test_loss)))
 print('=' * 89)
-
-print("| Saving model......")
-if not args.vae:
-    torch.save(model, args.path+"model.pth")
-else:
-    torch.save(model, args.path+"vae_model.pth")
