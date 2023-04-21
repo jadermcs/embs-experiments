@@ -44,7 +44,7 @@ parser.add_argument('--mps', action='store_true', default=False,
                     help='enables macOS GPU training')
 parser.add_argument('--log-interval', type=int, default=200, metavar='N',
                     help='report interval')
-parser.add_argument('--path', type=str, default='model.pth',
+parser.add_argument('--path', type=str, default='models/',
                     help='path to save the final model')
 parser.add_argument('--nhead', type=int, default=2,
                     help='the number of heads in the encoder/decoder of the transformer model')
@@ -250,4 +250,7 @@ print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
 print('=' * 89)
 
 print("| Saving model......")
-torch.save(model, args.path)
+if not args.vae:
+    torch.save(model, args.path+"model.pth")
+else:
+    torch.save(model, args.path+"vae_model.pth")
