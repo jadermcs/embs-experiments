@@ -205,8 +205,8 @@ class BayesianRNN(nn.Module):
         self.z_dim = ninp
 
     def forward(self, input_ids, hidden):
-        mu, var = self.encoder(input_ids)
-        eps = torch.randn_like(var)
-        z = mu + eps * var
+        mu, logvar = self.encoder(input_ids)
+        eps = torch.randn_like(logvar)
+        z = mu + eps * torch.exp(.5*logvar)
         output, hidden = self.decoder(z, hidden)
-        return output, hidden, mu, var
+        return output, hidden, mu, logvar
