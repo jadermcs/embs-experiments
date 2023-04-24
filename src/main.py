@@ -233,13 +233,13 @@ try:
         # Save the model if the validation loss is the best we've seen so far.
         if not best_val_loss or val_loss < best_val_loss:
             if not args.vae:
-                torch.save(model, args.path+"model.pth")
+                torch.save(model.state_dict(), args.path+"model.pth")
             else:
-                torch.save(model, args.path+"vae_model.pth")
+                torch.save(model.state_dict(), args.path+"vae_model.pth")
             best_val_loss = val_loss
         else:
             # Anneal the learning rate if no improvement has been seen in the validation dataset.
-            args.lr /= 4.0
+            args.lr /= 2.0
 except KeyboardInterrupt:
     print('-' * 89)
     print('Exiting from training early')
