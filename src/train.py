@@ -146,7 +146,6 @@ training_args = TrainingArguments(
         weight_decay=args.weight_decay,
         warmup_steps=args.num_warmup_steps,
         report_to="mlflow",
-        load_best_model_at_end=True,
         save_total_limit=5,
         # fp16=True,
 )
