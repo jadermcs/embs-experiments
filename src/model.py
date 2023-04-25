@@ -1,13 +1,17 @@
 import torch
-from typing import Optional
+from typing import Optional, Tuple
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers.models.bert.modeling_bert import BertEmbeddings
+from transformers import GPT2LMHeadModel, GPT2Model
 
 
-class VBertEmbeddings(BertEmbeddings):
+class VGPT2Embeddings(nn.Module):
     def __init__(self, config):
-        super().__init__(config)
+        super(VGPT2Embeddings).__init__()
+        self.word_embeddings = nn.Embedding(
+                config.vocab_size,
+                config.hidden_size,
+                padding_idx=config.pad_token_id)
         self.dev_word_embeddings = nn.Embedding(
                 config.vocab_size,
                 config.hidden_size,
@@ -16,47 +20,41 @@ class VBertEmbeddings(BertEmbeddings):
     def forward(
         self,
         input_ids: Optional[torch.LongTensor] = None,
+    ) -> torch.Tensor:
+
+        mu = self.word_embeddings(input_ids)
+        sigma = torch.exp(.5*self.dev_word_embeddings(input_ids))
+        eps = torch.randn_like(sigma)
+        embeddings = mu + eps * sigma
+
+        return embeddings, mu, sigma
+
+
+class VariationalGPT(GPT2Model):
+    def __init__(self, config):
+        super().__init__(config)
+        self.encoder = VGPT2Embeddings(config)
+        self.decoder = GPT2LMHeadModel(config)
+
+    def forward(
+        self,
+        input_ids: Optional[torch.LongTensor] = None,
+        past_key_values: Optional[Tuple[Tuple[torch.Tensor]]] = None,
+        attention_mask: Optional[torch.FloatTensor] = None,
         token_type_ids: Optional[torch.LongTensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
+        head_mask: Optional[torch.FloatTensor] = None,
         inputs_embeds: Optional[torch.FloatTensor] = None,
-        past_key_values_length: int = 0,
-    ) -> torch.Tensor:
-        if input_ids is not None:
-            input_shape = input_ids.size()
-        else:
-            input_shape = inputs_embeds.size()[:-1]
-
-        seq_length = input_shape[1]
-
-        if position_ids is None:
-            position_ids = self.position_ids[:, past_key_values_length : seq_length + past_key_values_length]
-
-        # Setting the token_type_ids to the registered buffer in constructor where it is all zeros, which usually occurs
-        # when its auto-generated, registered buffer helps users when tracing the model without passing token_type_ids, solves
-        # issue #5664
-        if token_type_ids is None:
-            if hasattr(self, "token_type_ids"):
-                buffered_token_type_ids = self.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
-                token_type_ids = buffered_token_type_ids_expanded
-            else:
-                token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=self.position_ids.device)
-
-        if inputs_embeds is None:
-            mu = self.word_embeddings(input_ids)
-            sigma = self.dev_word_embeddings(input_ids)
-            eps = torch.randn_like(sigma)
-            inputs_embeds = mu + eps * sigma
-
-        token_type_embeddings = self.token_type_embeddings(token_type_ids)
-
-        embeddings = inputs_embeds + token_type_embeddings
-        if self.position_embedding_type == "absolute":
-            position_embeddings = self.position_embeddings(position_ids)
-            embeddings += position_embeddings
-        embeddings = self.LayerNorm(embeddings)
-        embeddings = self.dropout(embeddings)
-        return embeddings, mu, sigma
+        encoder_hidden_states: Optional[torch.Tensor] = None,
+        encoder_attention_mask: Optional[torch.FloatTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ):
+        embs, mu, sigma = self.encoder(input_ids)
+        output = self.decoder(inputs_embeds=embs)
+        return output, mu, sigma
 
 
 class Encoder(nn.Module):
@@ -108,7 +106,6 @@ class Decoder(nn.Module):
         output, hidden = self.rnn(emb, hidden)
         output = self.drop(output)
         output = self.mlp(output)
-        output = output.view(-1, self.ntoken)
         return F.log_softmax(output, dim=1), hidden
 
     def init_hidden(self, bsz):
@@ -190,7 +187,7 @@ class RNNModel(nn.Module):
         self.decoder = Decoder(ntoken, ninp, nhid, nlayers, dropout)
         self.init_hidden = self.decoder.init_hidden
 
-    def forward(self, input_ids, hidden):
+    def forward(self, input_ids, hidden, attention_mask=None, labels=None):
         output = self.encoder(input_ids)
         output, hidden = self.decoder(output, hidden)
         return output, hidden
@@ -204,7 +201,7 @@ class BayesianRNN(nn.Module):
         self.init_hidden = self.decoder.init_hidden
         self.z_dim = ninp
 
-    def forward(self, input_ids, hidden):
+    def forward(self, input_ids, hidden, attention_mask=None, labels=None):
         mu, logvar = self.encoder(input_ids)
         eps = torch.randn_like(logvar)
         z = mu + eps * torch.exp(.5*logvar)
