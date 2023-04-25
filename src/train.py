@@ -139,6 +139,7 @@ print("Training.")
 training_args = TrainingArguments(
         f"{args.path}",
         run_name=f"{'vae' if args.vae else 'det'}",
+        evaluation_strategy="steps",
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=args.batch_size,
         gradient_accumulation_steps=args.gradient_accumulation_steps,
@@ -146,6 +147,7 @@ training_args = TrainingArguments(
         weight_decay=args.weight_decay,
         warmup_steps=args.num_warmup_steps,
         report_to="mlflow",
+        load_best_model_at_end=True,
         save_total_limit=5,
         # fp16=True,
 )
