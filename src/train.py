@@ -4,7 +4,7 @@ import argparse
 from itertools import chain
 from torch import nn
 from datasets import load_dataset
-from transformers import Trainer, TrainingArguments
+from transformers import Trainer, TrainingArguments, EarlyStoppingCallback
 
 from model import RNNModel, BayesianRNN
 from transformers import GPT2TokenizerFast
@@ -25,14 +25,22 @@ parser.add_argument('--token_length', type=int, default=128,
                     help='sequence length')
 parser.add_argument('--dropout', type=float, default=0.2,
                     help='dropout applied to layers (0 = no dropout)')
-parser.add_argument('--tied', action='store_true',
-                    help='tie the word embedding and softmax weights')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
 parser.add_argument('--vae', action='store_true', default=False,
                     help='use vae')
 parser.add_argument('--cuda', action='store_true', default=False,
                     help='use CUDA')
+parser.add_argument("--learning_rate", type=float, default=2e-5,
+                    help="Initial learning rate to use.")
+parser.add_argument("--weight_decay", type=float, default=0.1,
+                    help="Weight decay to use.")
+parser.add_argument("--max_steps", type=int, default=100,
+                    help="Total number of training epochs to perform.")
+parser.add_argument("--gradient_accumulation_steps", type=int, default=8,
+                    help="Number of updates steps to accumulate for a backward/update pass.")
+parser.add_argument("--num_warmup_steps", type=int, default=1,
+                    help="Number of steps for the warmup in the lr scheduler.")
 parser.add_argument('--path', type=str, default="models/",
                     help='path to save trained models')
 args = parser.parse_args()
@@ -132,17 +140,15 @@ training_args = TrainingArguments(
         f"{args.path}",
         run_name=f"{'vae' if args.vae else 'det'}",
         evaluation_strategy="epoch",
-        # save_strategy="epoch",
-        # per_device_train_batch_size=args.batch_size,
-        # per_device_eval_batch_size=args.batch_size,
-        # gradient_accumulation_steps=args.gradient_accumulation_steps,
-        # learning_rate=args.learning_rate,
-        # weight_decay=args.weight_decay,
-        # warmup_steps=args.num_warmup_steps,
-        # num_train_epochs=args.num_train_epochs,
-        # report_to="mlflow",
-        # load_best_model_at_end=True,
-        # save_total_limit=5,
+        per_device_train_batch_size=args.batch_size,
+        per_device_eval_batch_size=args.batch_size,
+        gradient_accumulation_steps=args.gradient_accumulation_steps,
+        learning_rate=args.learning_rate,
+        weight_decay=args.weight_decay,
+        warmup_steps=args.num_warmup_steps,
+        report_to="mlflow",
+        load_best_model_at_end=True,
+        save_total_limit=5,
         # fp16=True,
 )
 
@@ -152,6 +158,7 @@ trainer = CustomTrainer(
         tokenizer=tokenizer,
         train_dataset=datasets["train"],
         eval_dataset=datasets["validation"],
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=5)],
 )
 
 trainer.train()
