@@ -16,7 +16,7 @@ parser.add_argument('--emb_size', type=int, default=768,
                     help='size of word embeddings')
 parser.add_argument('--hidden_size', type=int, default=384,
                     help='number of hidden units per layer')
-parser.add_argument('--nlayers', type=int, default=2,
+parser.add_argument('--nlayers', type=int, default=6,
                     help='number of layers')
 parser.add_argument('--batch_size', type=int, default=64, metavar='N',
                     help='batch size')
@@ -52,6 +52,7 @@ else:
 tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
 tokenizer.pad_token = tokenizer.eos_token
 config = GPT2Config()
+config.n_layer = args.nlayers
 if not args.vae:
     model = GPT2LMHeadModel(config)
 else:
