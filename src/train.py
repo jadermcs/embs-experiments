@@ -2,12 +2,11 @@ import torch
 import argparse
 
 from itertools import chain
-from torch import nn
 from datasets import load_dataset
 from transformers import Trainer, TrainingArguments, EarlyStoppingCallback
 
-from model import RNNModel, BayesianRNN
-from transformers import GPT2TokenizerFast
+from variational_gpt import GPT2ModelWithVI
+from transformers import GPT2TokenizerFast, GPT2LMHeadModel, GPT2Config
 
 
 parser = argparse.ArgumentParser(description='PyTorch RNN')
@@ -37,7 +36,7 @@ parser.add_argument("--weight_decay", type=float, default=0.1,
                     help="Weight decay to use.")
 parser.add_argument("--max_steps", type=int, default=100,
                     help="Total number of training epochs to perform.")
-parser.add_argument("--gradient_accumulation_steps", type=int, default=8,
+parser.add_argument("--gradient_accumulation_steps", type=int, default=1,
                     help="Number of updates steps to accumulate for a backward/update pass.")
 parser.add_argument("--num_warmup_steps", type=int, default=1,
                     help="Number of steps for the warmup in the lr scheduler.")
@@ -52,44 +51,31 @@ else:
 
 tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
 tokenizer.pad_token = tokenizer.eos_token
-
+config = GPT2Config()
 if not args.vae:
-    model = RNNModel(tokenizer.vocab_size, args.emb_size, args.hidden_size,
-                     args.nlayers, args.dropout).to(device)
+    model = GPT2LMHeadModel(config)
 else:
-    model = BayesianRNN(tokenizer.vocab_size, args.emb_size, args.hidden_size,
-                        args.nlayers, args.dropout).to(device)
-
-criterion = nn.NLLLoss()
+    model = GPT2ModelWithVI(config)
 
 
-def kl_criterion(outputs, labels, mu, logvar):
-    NLL = criterion(outputs, labels)
+def kl_criterion(mu, logsigma):
     # see Appendix B from VAE paper:
     # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
     # https://arxiv.org/abs/1312.6114
     # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
-    KLD = torch.log(-0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp()))
-
-    return NLL + KLD
+    KLD = torch.log(
+            -0.5 * torch.sum(1 + logsigma - mu.pow(2) - logsigma.exp()))
+    return KLD
 
 
 class CustomTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):
-        hidden = model.init_hidden(args.token_length)
-        # forward pass
+        outputs = model(**inputs)
+        loss = outputs.loss
+        mu = outputs.mu
+        logsigma = outputs.logsigma
         if args.vae:
-            outputs, _, mu, logvar = model(inputs["input_ids"], hidden)
-        else:
-            outputs, _ = model(inputs["input_ids"], hidden)
-        # compute custom loss (suppose one has 3 labels with different weights)
-        logits = outputs[..., :-1, :].contiguous().view(
-                -1, self.tokenizer.vocab_size)
-        labels = inputs.get("labels")[..., 1:].contiguous().view(-1)
-        if not args.vae:
-            loss = criterion(logits, labels)
-        else:
-            loss = kl_criterion(logits, labels, mu, logvar)
+            loss += kl_criterion(mu, logsigma)
         return (loss, outputs) if return_outputs else loss
 
 
@@ -136,9 +122,13 @@ datasets = datasets.map(
 
 print("Training.")
 
+if args.vae:
+    exp_name = "rnn_vae"
+else:
+    exp_name = "rnn"
+
 training_args = TrainingArguments(
-        f"{args.path}",
-        run_name=f"{'vae' if args.vae else 'det'}",
+        exp_name,
         evaluation_strategy="steps",
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=args.batch_size,
@@ -162,3 +152,4 @@ trainer = CustomTrainer(
 )
 
 trainer.train()
+trainer.save_model()

@@ -113,11 +113,23 @@ class Decoder(nn.Module):
         return weight.new_zeros(self.nlayers, bsz, self.nhid)
 
 
+class RWKVBlock(nn.Module):
+
+    def __init__(self, vocab_size, emb_size, hidden_size, nlayers, dropout=0.5):
+        super(RWKVBlock, self).__init__()
+
+
 class RWKVDecoder(nn.Module):
 
-    def __init__(self, ntoken, ninp, nhid, nlayers, dropout=0.5):
+    def __init__(self, vocab_size, emb_size, hidden_size, nlayers, dropout=0.5):
         super(RWKVDecoder, self).__init__()
-        pass
+        self.embs = nn.Embedding()
+        self.embs_dev = nn.Embedding()
+        self.layer_norm = nn.LayerNorm()
+
+        self.blocks = [RWKVBlock() for _ in range(nlayers)]
+
+        self.mlp = nn.Linear(hidden_size, vocab_size)
 
     def layer_norm(self, x, w):
         return F.layer_norm(x, (self.args.n_embd,), weight=w.weight, bias=w.bias)
