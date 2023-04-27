@@ -140,7 +140,7 @@ training_args = TrainingArguments(
         report_to="mlflow",
         load_best_model_at_end=True,
         save_total_limit=5,
-        # fp16=True,
+        fp16=True,
 )
 
 trainer = CustomTrainer(
