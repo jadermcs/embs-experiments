@@ -72,10 +72,11 @@ def kl_criterion(mu, logsigma):
 class CustomTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):
         outputs = model(**inputs)
+        print(outputs)
         loss = outputs.loss
-        mu = outputs.mu
-        logsigma = outputs.logsigma
         if args.vae:
+            mu = outputs.mu
+            logsigma = outputs.logsigma
             loss += kl_criterion(mu, logsigma)
         return (loss, outputs) if return_outputs else loss
 
