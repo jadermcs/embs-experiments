@@ -18,7 +18,7 @@ parser.add_argument('--hidden_size', type=int, default=384,
                     help='number of hidden units per layer')
 parser.add_argument('--nlayers', type=int, default=6,
                     help='number of layers')
-parser.add_argument('--batch_size', type=int, default=64, metavar='N',
+parser.add_argument('--batch_size', type=int, default=32, metavar='N',
                     help='batch size')
 parser.add_argument('--token_length', type=int, default=128,
                     help='sequence length')
