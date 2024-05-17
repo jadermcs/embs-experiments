@@ -9,6 +9,20 @@ from itertools import chain
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 from transformers import Trainer, TrainingArguments, EarlyStoppingCallback
 
+config = {
+    'exp_name': 'sao-semantics',
+    'device': 'cpu',
+    'token_length': 512,
+    'n_features': 2048,
+    'learning_rate':1e-3,
+    'lambda_reg': 1e-3,
+    'batch_size': 64,
+    'accumulation_steps': 1,
+    'warmup_steps': 200,
+    'data': 'monology/pile-uncopyrighted',
+    'data': ('wikitext', 'wikitext-103-v1'),
+    'base_model': 'distilbert/distilbert-base-uncased',
+}
 
 class SparseAutoencoder(nn.Module):
     def __init__(self, n_features, model):
@@ -23,8 +37,8 @@ class SparseAutoencoder(nn.Module):
         f = self.relu(self.encoder(x))
         return f
 
-    def forward(self, input_data, return_outputs=False, compute_loss=False):
-        output = self.model(**input_data, output_hidden_states=True)
+    def forward(self, input_ids, attention_mask, labels=None, return_outputs=False, compute_loss=False):
+        output = self.model(input_ids, attention_mask=attention_mask, labels=labels, output_hidden_states=True)
         x_in = output.hidden_states[-1]
         f = self.encode(x_in)
         x = self.decoder(f)
@@ -42,25 +56,13 @@ class SparseAutoencoder(nn.Module):
         with torch.no_grad():
             self.decoder.weight.data = nn.functional.normalize(self.decoder.weight.data, p=2, dim=1)
 
+    def save_pretrained(self, path):
+        pass
+
 
 # In[57]:
 
 
-config = {
-    'exp_name': 'sao-semantics',
-    'device': 'cpu',
-    'token_length': 512,
-    'n_features': 2048,
-    'learning_rate':3e-5,
-    'lambda_reg': 5,
-    'batch_size': 64,
-    'accumulation_steps': 1,
-    'weight_decay': 0.1,
-    'warmup_steps': 200,
-    'data': 'monology/pile-uncopyrighted',
-    'data': ('wikitext', 'wikitext-103-v1'),
-    'base_model': 'distilbert/distilbert-base-uncased',
-}
 
 
 # In[58]:
@@ -72,17 +74,6 @@ model = SparseAutoencoder(
     config['n_features'],
     base_model
 ).to(config['device'])
-
-
-# In[59]:
-
-
-input_data = tokenizer("ola", return_tensors="pt")
-output = model(input_data)
-output
-
-
-# In[7]:
 
 
 dataset = load_dataset(*config['data'])
@@ -143,16 +134,14 @@ dataset = dataset.map(
 
 training_args = TrainingArguments(
         config['exp_name'],
-        evaluation_strategy="steps",
+        eval_strategy="steps",
+        save_strategy="no",
         per_device_train_batch_size=config['batch_size'],
         per_device_eval_batch_size=config['batch_size'],
         gradient_accumulation_steps=config['accumulation_steps'],
         learning_rate=config['learning_rate'],
-        weight_decay=config['weight_decay'],
         warmup_steps=config['warmup_steps'],
         report_to="wandb",
-        load_best_model_at_end=True,
-        save_total_limit=5,
         remove_unused_columns=False,
         fp16=True,
 )
@@ -163,7 +152,7 @@ training_args = TrainingArguments(
 
 class CustomTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):
-        _, recon_loss, reg_loss, outputs = model(inputs, return_outputs=return_outputs, compute_loss=True)
+        _, recon_loss, reg_loss, outputs = model(**inputs, return_outputs=return_outputs, compute_loss=True)
         reg_loss = reg_loss * config['lambda_reg']
         loss = recon_loss + reg_loss
         model.normalize_decoder_weights()
@@ -179,7 +168,6 @@ trainer = CustomTrainer(
         tokenizer=tokenizer,
         train_dataset=dataset["train"],
         eval_dataset=dataset["validation"],
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=5)],
 )
 
 
@@ -187,4 +175,4 @@ trainer = CustomTrainer(
 
 
 trainer.train()
-trainer.save_model()
+torch.save(model.state_dict(), config['exp_name'])
