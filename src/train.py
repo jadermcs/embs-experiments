@@ -16,7 +16,7 @@ parser.add_argument('--emb_size', type=int, default=768,
                     help='size of word embeddings')
 parser.add_argument('--hidden_size', type=int, default=384,
                     help='number of hidden units per layer')
-parser.add_argument('--nlayers', type=int, default=6,
+parser.add_argument('--nlayers', type=int, default=4,
                     help='number of layers')
 parser.add_argument('--batch_size', type=int, default=32, metavar='N',
                     help='batch size')
