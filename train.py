@@ -38,25 +38,6 @@ class SparseAutoencoder(nn.Module):
     def save_pretrained(self, path):
         pass
 
-dataset = load_from_disk("tensors")
-model = SparseAutoencoder(config['hidden_size'], config['n_features']).to(config['device'])
-
-training_args = TrainingArguments(
-        config['exp_name'],
-        num_train_epochs=config['epochs'],
-        eval_strategy="steps",
-        per_device_train_batch_size=config['batch_size'],
-        per_device_eval_batch_size=config['batch_size'],
-        gradient_accumulation_steps=config['accumulation_steps'],
-        learning_rate=config['learning_rate'],
-        warmup_steps=config['warmup_steps'],
-        report_to="wandb",
-        load_best_model_at_end=True,
-        save_total_limit=5,
-        remove_unused_columns=False,
-        fp16=True,
-)
-
 
 class CustomTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):
@@ -72,12 +53,32 @@ class CustomTrainer(Trainer):
         return {"eval_loss": loss.item()}
 
 
-trainer = CustomTrainer(
-        model=model,
-        args=training_args,
-        train_dataset=dataset["train"],
-        eval_dataset=dataset["test"],
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=5)],
-)
+if __name__ == "__main__":
+    dataset = load_from_disk("tensors")
+    model = SparseAutoencoder(config['hidden_size'], config['n_features']).to(config['device'])
 
-trainer.train()
+    training_args = TrainingArguments(
+            config['exp_name'],
+            num_train_epochs=config['epochs'],
+            eval_strategy="steps",
+            per_device_train_batch_size=config['batch_size'],
+            per_device_eval_batch_size=config['batch_size'],
+            gradient_accumulation_steps=config['accumulation_steps'],
+            learning_rate=config['learning_rate'],
+            warmup_steps=config['warmup_steps'],
+            report_to="wandb",
+            load_best_model_at_end=True,
+            save_total_limit=5,
+            remove_unused_columns=False,
+            fp16=True,
+    )
+
+    trainer = CustomTrainer(
+            model=model,
+            args=training_args,
+            train_dataset=dataset["train"],
+            eval_dataset=dataset["test"],
+            callbacks=[EarlyStoppingCallback(early_stopping_patience=5)],
+    )
+
+    trainer.train()

@@ -3,3 +3,7 @@ torch
 numpy
 datasets
 tqdm
+networkx
+matplotlib
+sentencepiece
+protobuf
