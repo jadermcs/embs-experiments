@@ -9,9 +9,9 @@ from datasets import Dataset
 from huggingface_hub import snapshot_download
 
 
-model = AutoModelForCausalLM.from_pretrained("microsoft/Phi-3-mini-4k-instruct")
+model = AutoModelForCausalLM.from_pretrained("google/mt5-large")
 print(model)
-tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3-mini-4k-instruct")
+tokenizer = AutoTokenizer.from_pretrained("google/mt5-large")
 # PREPARE DATA
 
 # folder = snapshot_download(
