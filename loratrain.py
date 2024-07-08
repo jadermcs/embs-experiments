@@ -1,4 +1,5 @@
 import os
+import re
 import pandas as pd
 from peft import LoraConfig, TaskType
 from peft import get_peft_model
@@ -13,22 +14,36 @@ print(model)
 tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3-mini-4k-instruct")
 # PREPARE DATA
 
-# folder = snapshot_download(
-#     "cis-lmu/glotcc-v1",
-#     repo_type="dataset",
-#     local_dir="./glotcc-v1/",
-#     allow_patterns="v1.0/ltz-Latn/*"
-# )
+folder = snapshot_download(
+    "cis-lmu/glotcc-v1",
+    repo_type="dataset",
+    local_dir="./glotcc-v1/",
+    allow_patterns="v1.0/ltz-Latn/*"
+)
 
 # Load the dataset from a Parquet file
 # Replace the file path with the path to the desired language's Parquet file
 
-for path, subdirs, files in os.walk("~/d4h_2023/LOD-Corpus/Texter"):
+data = []
+for path, subdirs, files in os.walk("../LOD-Corpus/Texter"):
     for name in files:
-        print(os.path.join(path, name))
+        fpath = os.path.join(path, name)
+        with open(fpath) as fin:
+            content = fin.read()
+        data.append({"source": fpath, "content": content})
 
-exit()
+data = pd.DataFrame(data)
+
+CLEANR = re.compile('<.*?>')
+
+
+def cleanhtml(raw_html):
+  return re.sub(CLEANR, '', raw_html)
+
+
+data.content = data.content.apply(cleanhtml)
 dataset = pd.read_parquet('./glotcc-v1/v1.0/ltz-Latn/ltz-Latn_0.parquet')
+dataset = pd.concat([data, dataset], ignore_index=True)
 dataset = Dataset.from_pandas(dataset[["content"]])
 
 

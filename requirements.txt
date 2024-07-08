@@ -1,4 +1,6 @@
 transformers
+datasets
+peft
 torch
 numpy
 datasets
