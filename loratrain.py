@@ -3,23 +3,23 @@ import re
 import pandas as pd
 from peft import LoraConfig, TaskType
 from peft import get_peft_model
-from transformers import AutoModelForCausalLM, Trainer, TrainingArguments
+from transformers import AutoModel, Trainer, TrainingArguments
 from transformers import AutoTokenizer, DataCollatorForLanguageModeling
 from datasets import Dataset
 from huggingface_hub import snapshot_download
 
 
-model = AutoModelForCausalLM.from_pretrained("microsoft/Phi-3-mini-4k-instruct")
+model = AutoModel.from_pretrained("microsoft/Phi-3-mini-4k-instruct")
 print(model)
 tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3-mini-4k-instruct")
 # PREPARE DATA
 
-folder = snapshot_download(
-    "cis-lmu/glotcc-v1",
-    repo_type="dataset",
-    local_dir="./glotcc-v1/",
-    allow_patterns="v1.0/ltz-Latn/*"
-)
+# folder = snapshot_download(
+#     "cis-lmu/glotcc-v1",
+#     repo_type="dataset",
+#     local_dir="./glotcc-v1/",
+#     allow_patterns="v1.0/ltz-Latn/*"
+# )
 
 # Load the dataset from a Parquet file
 # Replace the file path with the path to the desired language's Parquet file
@@ -30,7 +30,11 @@ for path, subdirs, files in os.walk("../LOD-Corpus/Texter/ANER_TEXTER"):
         fpath = os.path.join(path, name)
         with open(fpath) as fin:
             content = fin.read()
-        data.append({"source": fpath, "content": content})
+        data.append({
+            "source": fpath,
+            "content": content,
+            "content-length": len(content),
+            })
 
 data = pd.DataFrame(data)
 
@@ -104,7 +108,7 @@ training_args = TrainingArguments(
     per_device_eval_batch_size=32,
     num_train_epochs=2,
     weight_decay=0.01,
-    evaluation_strategy="epoch",
+    eval_strategy="epoch",
     save_strategy="epoch",
     load_best_model_at_end=True,
 )
