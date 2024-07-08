@@ -25,7 +25,7 @@ folder = snapshot_download(
 # Replace the file path with the path to the desired language's Parquet file
 
 data = []
-for path, subdirs, files in os.walk("../LOD-Corpus/Texter"):
+for path, subdirs, files in os.walk("../LOD-Corpus/Texter/ANER_TEXTER"):
     for name in files:
         fpath = os.path.join(path, name)
         with open(fpath) as fin:
