@@ -44,9 +44,8 @@ def cleanhtml(raw_html):
 data.content = data.content.apply(cleanhtml)
 dataset = pd.read_parquet('./glotcc-v1/v1.0/ltz-Latn/ltz-Latn_0.parquet')
 dataset = pd.concat([data, dataset], ignore_index=True)
-print(dataset.tail())
+print(dataset.head())
 dataset = Dataset.from_pandas(dataset[["content"]]).shuffle(seed=42)
-dataset = dataset.train_test_split(test_size=0.01)
 
 
 def preprocess_function(examples):
@@ -59,6 +58,7 @@ dataset = dataset.map(
     num_proc=4,
     remove_columns=dataset.column_names,
 )
+dataset = dataset.train_test_split(test_size=0.01)
 
 block_size = 1024
 
