@@ -3,13 +3,13 @@ import re
 import pandas as pd
 from peft import LoraConfig, TaskType
 from peft import get_peft_model
-from transformers import AutoModel, Trainer, TrainingArguments
+from transformers import AutoModelForCausalLM, Trainer, TrainingArguments
 from transformers import AutoTokenizer, DataCollatorForLanguageModeling
 from datasets import Dataset
 from huggingface_hub import snapshot_download
 
 
-model = AutoModel.from_pretrained("microsoft/Phi-3-mini-4k-instruct")
+model = AutoModelForCausalLM.from_pretrained("microsoft/Phi-3-mini-4k-instruct")
 print(model)
 tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3-mini-4k-instruct")
 # PREPARE DATA
@@ -87,7 +87,6 @@ def group_texts(examples):
 dataset = dataset.map(group_texts, batched=True, num_proc=4)
 
 tokenizer.pad_token = tokenizer.eos_token
-data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
 peft_config = LoraConfig(
         task_type=TaskType.SEQ_2_SEQ_LM,
@@ -119,7 +118,6 @@ trainer = Trainer(
     train_dataset=dataset["train"],
     eval_dataset=dataset["test"],
     tokenizer=tokenizer,
-    data_collator=data_collator,
 )
 
 trainer.train()
