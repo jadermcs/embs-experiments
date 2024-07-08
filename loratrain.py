@@ -3,13 +3,13 @@ import re
 import pandas as pd
 from peft import LoraConfig, TaskType
 from peft import get_peft_model
-from transformers import AutoModelForCausalLM, Trainer, TrainingArguments
-from transformers import AutoTokenizer, DataCollatorForLanguageModeling
+from transformers import AutoModelForSeq2SeqLM, Trainer, TrainingArguments
+from transformers import AutoTokenizer, DataCollatorForSeq2Seq
 from datasets import Dataset
 from huggingface_hub import snapshot_download
 
 
-model = AutoModelForCausalLM.from_pretrained("google/mt5-large")
+model = AutoModelForSeq2SeqLM.from_pretrained("google/mt5-large")
 print(model)
 tokenizer = AutoTokenizer.from_pretrained("google/mt5-large")
 # PREPARE DATA
@@ -103,8 +103,8 @@ print(model.print_trainable_parameters())
 training_args = TrainingArguments(
     output_dir="LIST/ltz-phi-lora",
     learning_rate=1e-3,
-    per_device_train_batch_size=32,
-    per_device_eval_batch_size=32,
+    per_device_train_batch_size=16,
+    per_device_eval_batch_size=16,
     num_train_epochs=2,
     weight_decay=0.01,
     eval_strategy="epoch",
