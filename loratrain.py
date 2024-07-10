@@ -53,7 +53,7 @@ dataset = Dataset.from_pandas(dataset[["content"]]).shuffle(seed=42)
 
 
 def preprocess_function(examples):
-    return tokenizer([" ".join(x) for x in examples["content"]])
+    return tokenizer(examples["content"])
 
 
 dataset = dataset.map(
@@ -80,10 +80,12 @@ def group_texts(examples):
         k: [t[i: i + block_size] for i in range(0, total_length, block_size)]
         for k, t in concatenated_examples.items()
     }
+    result["labels"] = result["input_ids"].copy()
     return result
 
 
 dataset = dataset.map(group_texts, batched=True, num_proc=4)
+print(dataset)
 
 tokenizer.pad_token = tokenizer.eos_token
 
