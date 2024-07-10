@@ -1,7 +1,7 @@
 import numpy as np
 from peft import LoraConfig, TaskType
 from peft import get_peft_model
-from transformers import AutoModelForSeq2SeqLM, Trainer, TrainingArguments
+from transformers import AutoModelForSeq2SeqLM, Seq2SeqTrainer, Seq2SeqTrainingArguments
 from transformers import AutoTokenizer, DataCollatorForSeq2Seq
 from datasets import load_dataset
 
@@ -73,8 +73,16 @@ peft_config = LoraConfig(
 model = get_peft_model(model, peft_config)
 model.print_trainable_parameters()
 
+# Data collator
+data_collator = DataCollatorForSeq2Seq(
+    tokenizer,
+    model=model,
+    label_pad_token_id=tokenizer.pad_token,
+    pad_to_multiple_of=8
+)
 
-training_args = TrainingArguments(
+
+training_args = Seq2SeqTrainingArguments(
     output_dir="LIST/ltz-phi-lora",
     learning_rate=1e-3,
     per_device_train_batch_size=16,
@@ -86,12 +94,13 @@ training_args = TrainingArguments(
     load_best_model_at_end=True,
 )
 
-trainer = Trainer(
+trainer = Seq2SeqTrainer(
     model=model,
     args=training_args,
     train_dataset=dataset["train"],
     eval_dataset=dataset["test"],
     tokenizer=tokenizer,
+    data_collator=data_collator,
 )
 
 trainer.train()
