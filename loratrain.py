@@ -76,7 +76,7 @@ print(dataset["train"][0])
 
 peft_config = LoraConfig(
         task_type=TaskType.SEQ_2_SEQ_LM,
-        target_modules='all-linear',
+        target_modules=["q", "v"],
         r=8,
         lora_alpha=32,
         lora_dropout=0.1)
