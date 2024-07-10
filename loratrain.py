@@ -49,9 +49,16 @@ print(max_target)
 
 
 def tokenize_function(example):
-    item = tokenizer(example["prompt"], max_length=max_source, padding="max_length", truncation=True)
-    labels = tokenizer(text_target=example["answer"], max_length=max_target, padding="max_length", truncation=True)
-    item["labels"] = labels["input_ids"]
+    item = tokenizer(
+            example["prompt"],
+            max_length=max_source,
+            padding="max_length", truncation=True)
+    labels = tokenizer(
+            text_target=example["answer"],
+            max_length=max_target,
+            padding="max_length", truncation=True).input_ids
+    labels[labels == tokenizer.pad_token_id] = -100
+    item["labels"] = labels
     return item
 
 
