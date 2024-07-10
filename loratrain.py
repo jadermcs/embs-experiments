@@ -78,6 +78,7 @@ model.print_trainable_parameters()
 data_collator = DataCollatorForSeq2Seq(
     tokenizer,
     model=model,
+    label_pad_token_id=-100,
     pad_to_multiple_of=8
 )
 
