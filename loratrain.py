@@ -9,16 +9,6 @@ from datasets import load_dataset
 model = AutoModelForSeq2SeqLM.from_pretrained("google/mt5-base")
 print(model)
 tokenizer = AutoTokenizer.from_pretrained("google/mt5-base")
-new_tokens = ["<sep>"]
-
-# check if the tokens are already in the vocabulary
-new_tokens = set(new_tokens) - set(tokenizer.vocab.keys())
-
-# add the tokens to the tokenizer vocabulary
-tokenizer.add_tokens(list(new_tokens))
-
-# add new, random embeddings for the new tokens
-model.resize_token_embeddings(len(tokenizer))
 
 paths = {x: f"data/dimension.{x}.csv" for x in ("train", "valid", "test")}
 dataset = load_dataset("csv", data_files=paths, delimiter="\t")
@@ -27,7 +17,7 @@ dataset = load_dataset("csv", data_files=paths, delimiter="\t")
 def preprocess_function(example):
     label = "Identesch" if example['label'] == "identical" else "Ënnerschiddlech"
     item = {
-            "prompt": f"{example['sentence1']}<sep>{example['sentence2']}",
+            "prompt": f"{example['sentence1']}\r\n{example['sentence2']}",
             "answer": f"Ass eng Bedeitung vu '{example['lemma']}' identesch oder ënnerschiddlech? {label}",
             }
     item["len_prompt"] = len(tokenizer(item["prompt"]).input_ids)
