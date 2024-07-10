@@ -1,90 +1,63 @@
-import os
-import re
-import pandas as pd
+import numpy as np
 from peft import LoraConfig, TaskType
 from peft import get_peft_model
 from transformers import AutoModelForSeq2SeqLM, Trainer, TrainingArguments
 from transformers import AutoTokenizer, DataCollatorForSeq2Seq
-from datasets import Dataset
-from huggingface_hub import snapshot_download
+from datasets import load_dataset
 
 
-model = AutoModelForSeq2SeqLM.from_pretrained("google/mt5-large")
+model = AutoModelForSeq2SeqLM.from_pretrained("google/mt5-base")
 print(model)
-tokenizer = AutoTokenizer.from_pretrained("google/mt5-large")
-# PREPARE DATA
+tokenizer = AutoTokenizer.from_pretrained("google/mt5-base")
+new_tokens = ["<sep>"]
 
-# folder = snapshot_download(
-#     "cis-lmu/glotcc-v1",
-#     repo_type="dataset",
-#     local_dir="./glotcc-v1/",
-#     allow_patterns="v1.0/ltz-Latn/*"
-# )
+# check if the tokens are already in the vocabulary
+new_tokens = set(new_tokens) - set(tokenizer.vocab.keys())
 
-# Load the dataset from a Parquet file
-# Replace the file path with the path to the desired language's Parquet file
+# add the tokens to the tokenizer vocabulary
+tokenizer.add_tokens(list(new_tokens))
 
-data = []
-for path, subdirs, files in os.walk("../LOD-Corpus/Texter/ANER_TEXTER"):
-    for name in files:
-        fpath = os.path.join(path, name)
-        with open(fpath) as fin:
-            content = fin.read()
-        data.append({
-            "source": fpath,
-            "content": content,
-            "content-length": len(content),
-            })
+# add new, random embeddings for the new tokens
+model.resize_token_embeddings(len(tokenizer))
 
-data = pd.DataFrame(data)
-
-CLEANR = re.compile('<.*?>')
+paths = {x: f"data/dimension.{x}.csv" for x in ("train", "valid", "test")}
+dataset = load_dataset("csv", data_files=paths, delimiter="\t")
 
 
-def cleanhtml(raw_html):
-  return re.sub(CLEANR, '', raw_html)
-
-
-data.content = data.content.apply(cleanhtml)
-dataset = pd.read_parquet('./glotcc-v1/v1.0/ltz-Latn/ltz-Latn_0.parquet')
-dataset = pd.concat([data, dataset], ignore_index=True)
-print(dataset.head())
-dataset = Dataset.from_pandas(dataset[["content"]]).shuffle(seed=42)
-
-
-def preprocess_function(examples):
-    return tokenizer(examples["content"])
+def preprocess_function(example):
+    label = "Identesch" if example['label'] == "identical" else "Ënnerschiddlech"
+    item = {
+            "prompt": f"{example['sentence1']}<sep>{example['sentence2']}",
+            "answer": f"Ass eng Bedeitung vu '{example['lemma']}' identesch oder ënnerschiddlech? {label}",
+            }
+    item["len_prompt"] = len(tokenizer(item["prompt"]))
+    item["len_answer"] = len(tokenizer(item["answer"]))
+    return item
 
 
 dataset = dataset.map(
     preprocess_function,
-    batched=True,
     num_proc=4,
-    remove_columns=dataset.column_names,
 )
-dataset = dataset.train_test_split(test_size=0.01)
+print(dataset)
 
-block_size = 1024
-
-
-def group_texts(examples):
-    # Concatenate all texts.
-    concatenated_examples = {k: sum(examples[k], []) for k in examples.keys()}
-    total_length = len(concatenated_examples[list(examples.keys())[0]])
-    # We drop the small remainder, we could add padding if the model supported
-    # it instead of this drop, you can customize this part to your needs.
-    if total_length >= block_size:
-        total_length = (total_length // block_size) * block_size
-    # Split by chunks of block_size.
-    result = {
-        k: [t[i: i + block_size] for i in range(0, total_length, block_size)]
-        for k, t in concatenated_examples.items()
-    }
-    result["labels"] = result["input_ids"].copy()
-    return result
+max_source = int(np.percentile(dataset["train"]["len_prompt"], 90))
+max_target = int(np.percentile(dataset["train"]["len_answer"], 90))
 
 
-dataset = dataset.map(group_texts, batched=True, num_proc=4)
+def tokenize_function(example):
+    item = tokenizer(example["prompt"], max_length=max_source, padding="max_length", truncation=True)
+    labels = tokenizer(text_target=example["answer"], max_length=max_target, padding="max_length", truncation=True)
+    item["labels"] = labels["input_ids"]
+    return item
+
+
+dataset = dataset.map(
+    tokenize_function,
+    num_proc=4,
+    batched=True,
+    remove_columns=dataset["train"].column_names,
+)
 print(dataset)
 
 tokenizer.pad_token = tokenizer.eos_token
@@ -98,7 +71,7 @@ peft_config = LoraConfig(
         lora_dropout=0.1)
 
 model = get_peft_model(model, peft_config)
-print(model.print_trainable_parameters())
+model.print_trainable_parameters()
 
 
 training_args = TrainingArguments(
