@@ -30,8 +30,8 @@ def preprocess_function(example):
             "prompt": f"{example['sentence1']}<sep>{example['sentence2']}",
             "answer": f"Ass eng Bedeitung vu '{example['lemma']}' identesch oder ënnerschiddlech? {label}",
             }
-    item["len_prompt"] = len(tokenizer(item["prompt"])["input_ids"])
-    item["len_answer"] = len(tokenizer(item["answer"])["input_ids"])
+    item["len_prompt"] = len(tokenizer(item["prompt"]).input_ids)
+    item["len_answer"] = len(tokenizer(item["answer"]).input_ids)
     return item
 
 
@@ -57,7 +57,10 @@ def tokenize_function(example):
             text_target=example["answer"],
             max_length=max_target,
             padding="max_length", truncation=True).input_ids
-    labels[labels == tokenizer.pad_token_id] = -100
+    labels = [
+            [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in labels
+        ]
+
     item["labels"] = labels
     return item
 
