@@ -30,19 +30,22 @@ def preprocess_function(example):
             "prompt": f"{example['sentence1']}<sep>{example['sentence2']}",
             "answer": f"Ass eng Bedeitung vu '{example['lemma']}' identesch oder ënnerschiddlech? {label}",
             }
-    item["len_prompt"] = len(tokenizer(item["prompt"]))
-    item["len_answer"] = len(tokenizer(item["answer"]))
+    item["len_prompt"] = len(tokenizer(item["prompt"])["input_ids"])
+    item["len_answer"] = len(tokenizer(item["answer"])["input_ids"])
     return item
 
 
 dataset = dataset.map(
     preprocess_function,
     num_proc=4,
+    remove_columns=dataset["train"].column_names,
 )
 print(dataset)
 
-max_source = int(np.percentile(dataset["train"]["len_prompt"], 90))
-max_target = int(np.percentile(dataset["train"]["len_answer"], 90))
+max_source = int(np.percentile(dataset["train"]["len_prompt"], 99))
+print(max_source)
+max_target = int(np.percentile(dataset["train"]["len_answer"], 99))
+print(max_target)
 
 
 def tokenize_function(example):
@@ -59,12 +62,10 @@ dataset = dataset.map(
     remove_columns=dataset["train"].column_names,
 )
 print(dataset)
-
-tokenizer.pad_token = tokenizer.eos_token
+print(dataset["train"][0])
 
 peft_config = LoraConfig(
         task_type=TaskType.SEQ_2_SEQ_LM,
-        inference_mode=False,
         target_modules='all-linear',
         r=8,
         lora_alpha=32,
@@ -77,13 +78,12 @@ model.print_trainable_parameters()
 data_collator = DataCollatorForSeq2Seq(
     tokenizer,
     model=model,
-    label_pad_token_id=tokenizer.pad_token,
     pad_to_multiple_of=8
 )
 
 
 training_args = Seq2SeqTrainingArguments(
-    output_dir="LIST/ltz-phi-lora",
+    output_dir="LIST/ltz-mt5-lora",
     learning_rate=1e-3,
     per_device_train_batch_size=16,
     per_device_eval_batch_size=16,
@@ -98,7 +98,7 @@ trainer = Seq2SeqTrainer(
     model=model,
     args=training_args,
     train_dataset=dataset["train"],
-    eval_dataset=dataset["test"],
+    eval_dataset=dataset["valid"],
     tokenizer=tokenizer,
     data_collator=data_collator,
 )
