@@ -107,10 +107,10 @@ metric = evaluate.load("accuracy")
 def compute_metrics(eval_pred):
     preds, labels = eval_pred
     preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
-    preds = [1 if x.endswith("Identesch") else 0 for x in preds]
+    preds = [1 if x.lower().endswith("richteg") else 0 for x in preds]
     labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
     labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
-    labels = [1 if x.endswith("Identesch") else 0 for x in labels]
+    labels = [1 if x.lower().endswith("richteg") else 0 for x in labels]
 
     result = metric.compute(predictions=preds, references=labels)
     return result
