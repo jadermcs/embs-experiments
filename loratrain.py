@@ -129,6 +129,7 @@ training_args = Seq2SeqTrainingArguments(
     logging_steps=500,
     save_strategy="epoch",
     eval_strategy="epoch",
+    predict_with_generate=True,
 )
 
 # Create Trainer instance
