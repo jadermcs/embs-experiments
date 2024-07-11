@@ -65,17 +65,19 @@ matched_in = matched_in[~matched_in.sentence2.isna() & matched_in.lemma.isin(wor
 matched_in = matched_in.groupby("lemma").sample(1)
 matched_in["label"] = "identical"
 print(matched_in)
-df = pd.concat([matched_in, matched_out], ignore_index=True)
+df = pd.concat([matched_in, matched_out.sample(matched_in.shape[0])],
+               ignore_index=True)
 df = df.sample(frac=1.).drop(columns="meaning")
 df.label = df.label.apply(
         lambda x: "richteg" if x == "identical" else "falsch")
 df["prompt"] = "\"" + df['sentence1'] + "\"\r\n\r\n\"" + df['sentence2'] + "\""
 df["answer"] = "Ist d'Bedeitung vun '" + df['lemma'] +\
         "' an deenen zwee Sätz identesch? " + df['label']
-train = df.iloc[:-2000]
-valid = df.iloc[-2000:-1000]
-test = df.iloc[-1000:]
+train = df.iloc[:-1000]
+valid = df.iloc[-1000:-500]
+test = df.iloc[-500:]
 
+df.to_csv("data/dimension.complete.csv", sep="\t", index=False)
 train.to_csv("data/dimension.train.csv", sep="\t", index=False)
 valid.to_csv("data/dimension.valid.csv", sep="\t", index=False)
 test.to_csv("data/dimension.test.csv", sep="\t", index=False)
