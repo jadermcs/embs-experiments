@@ -70,7 +70,7 @@ df = df.sort_values("lemma").drop(columns="meaning")
 df.label = df.label.apply(lambda x: "Identesch" if x == "identical" else "Ënnerschiddlech")
 df["prompt"] = df['sentence1'] + "\r\n" + df['sentence2']
 df["answer"] = "Ass eng Bedeitung vu '" + df['lemma'] +\
-        "' identesch oder ënnerschiddlech?" + df['label']
+        "' identesch oder ënnerschiddlech? " + df['label']
 train = df.iloc[:-2000]
 valid = df.iloc[-2000:-1000]
 test = df.iloc[-1000:]

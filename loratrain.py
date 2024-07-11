@@ -1,4 +1,5 @@
 import numpy as np
+import evaluate
 from datasets import load_dataset, concatenate_datasets
 from peft import LoraConfig, get_peft_model, TaskType
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
@@ -14,7 +15,7 @@ print(f"Validation dataset size: {len(dataset['valid'])}")
 
 
 # Set model and load tokenizer
-model_id = "google/mt5-small"
+model_id = "google/mt5-base"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 
 # The maximum total input sequence length after tokenization.
@@ -100,6 +101,21 @@ data_collator = DataCollatorForSeq2Seq(
     pad_to_multiple_of=8
 )
 
+metric = evaluate.load("accuracy")
+
+
+def compute_metrics(eval_pred):
+    preds, labels = eval_pred
+    preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
+    preds = [1 if x.endswith("Identesch") else 0 for x in preds]
+    labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
+    labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+    labels = [1 if x.endswith("Identesch") else 0 for x in labels]
+
+    result = metric.compute(predictions=preds, references=labels)
+    return result
+
+
 output_dir = "lora-mt5"
 
 # Define training args
@@ -122,6 +138,7 @@ trainer = Seq2SeqTrainer(
     data_collator=data_collator,
     train_dataset=tokenized_dataset["train"],
     eval_dataset=tokenized_dataset["valid"],
+    compute_metrics=compute_metrics,
 )
 model.config.use_cache = False  # silence the warnings. Please re-enable for inference!
 
