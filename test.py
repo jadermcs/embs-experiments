@@ -24,7 +24,7 @@ from datasets import concatenate_datasets
 import numpy as np
 # The maximum total input sequence length after tokenization.
 # Sequences longer than this will be truncated, sequences shorter will be padded.
-tokenized_inputs = concatenate_datasets([dataset["train"], dataset["test"]]).map(lambda x: tokenizer(x["prompt"], truncation=True), batched=True, remove_columns=["dialogue", "summary"])
+tokenized_inputs = concatenate_datasets([dataset["train"], dataset["test"]]).map(lambda x: tokenizer(x["prompt"], truncation=True), batched=True, remove_columns=dataset["train"].column_names)
 input_lenghts = [len(x) for x in tokenized_inputs["input_ids"]]
 # take 85 percentile of max length for better utilization
 max_source_length = int(np.percentile(input_lenghts, 85))
@@ -32,7 +32,7 @@ print(f"Max source length: {max_source_length}")
 
 # The maximum total sequence length for target text after tokenization.
 # Sequences longer than this will be truncated, sequences shorter will be padded."
-tokenized_targets = concatenate_datasets([dataset["train"], dataset["test"]]).map(lambda x: tokenizer(x["answer"], truncation=True), batched=True, remove_columns=["dialogue", "summary"])
+tokenized_targets = concatenate_datasets([dataset["train"], dataset["test"]]).map(lambda x: tokenizer(x["answer"], truncation=True), batched=True, remove_columns=dataset["train"].column_names)
 target_lenghts = [len(x) for x in tokenized_targets["input_ids"]]
 # take 90 percentile of max length for better utilization
 max_target_length = int(np.percentile(target_lenghts, 90))
@@ -60,7 +60,7 @@ def preprocess_function(sample, padding="max_length"):
     return model_inputs
 
 
-tokenized_dataset = dataset.map(preprocess_function, batched=True, remove_columns=["dialogue", "summary", "id"])
+tokenized_dataset = dataset.map(preprocess_function, batched=True, remove_columns=dataset["train"].column_names)
 print(f"Keys of tokenized dataset: {list(tokenized_dataset['train'].features)}")
 
 # save datasets to disk for later easy loading
