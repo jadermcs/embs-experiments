@@ -15,7 +15,7 @@ print(f"Validation dataset size: {len(dataset['valid'])}")
 
 
 # Set model and load tokenizer
-model_id = "google/mt5-base"
+model_id = "google/mt5-large"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 
 # The maximum total input sequence length after tokenization.
