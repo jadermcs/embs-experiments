@@ -67,10 +67,14 @@ matched_in["label"] = "identical"
 print(matched_in)
 df = pd.concat([matched_in, matched_out], ignore_index=True)
 df = df.sort_values("lemma").drop(columns="meaning")
+df.label = df.label.apply(lambda x: "Identesch" if x == "identical" else "Ënnerschiddlech")
+df["prompt"] = df['sentence1'] + "\r\n" + df['sentence2']
+df["answer"] = "Ass eng Bedeitung vu '" + df['lemma'] +\
+        "' identesch oder ënnerschiddlech?" + df['label']
 train = df.iloc[:-2000]
 valid = df.iloc[-2000:-1000]
 test = df.iloc[-1000:]
 
-train.to_csv("dimension.train.csv", sep="\t", index=False)
-valid.to_csv("dimension.valid.csv", sep="\t", index=False)
-test.to_csv("dimension.test.csv", sep="\t", index=False)
+train.to_csv("data/dimension.train.csv", sep="\t", index=False)
+valid.to_csv("data/dimension.valid.csv", sep="\t", index=False)
+test.to_csv("data/dimension.test.csv", sep="\t", index=False)
