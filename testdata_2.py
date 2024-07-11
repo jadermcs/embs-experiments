@@ -66,8 +66,9 @@ matched_in = matched_in.groupby("lemma").sample(1)
 matched_in["label"] = "identical"
 print(matched_in)
 df = pd.concat([matched_in, matched_out], ignore_index=True)
-df = df.sort_values("lemma").drop(columns="meaning")
-df.label = df.label.apply(lambda x: "Identesch" if x == "identical" else "Ënnerschiddlech")
+df = df.drop(columns="meaning")
+df.label = df.label.apply(
+        lambda x: "Identesch" if x == "identical" else "Ënnerschiddlech")
 df["prompt"] = df['sentence1'] + "\r\n" + df['sentence2']
 df["answer"] = "Ass eng Bedeitung vu '" + df['lemma'] +\
         "' identesch oder ënnerschiddlech? " + df['label']

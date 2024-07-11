@@ -130,6 +130,7 @@ training_args = Seq2SeqTrainingArguments(
     save_strategy="epoch",
     eval_strategy="epoch",
     predict_with_generate=True,
+    generation_max_length=20,
 )
 
 # Create Trainer instance
