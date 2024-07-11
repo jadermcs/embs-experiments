@@ -6,7 +6,6 @@ from transformers import DataCollatorForSeq2Seq
 from transformers import Seq2SeqTrainer, Seq2SeqTrainingArguments
 
 # Load dataset
-
 paths = {x: f"data/dimension.{x}.csv" for x in ("train", "valid", "test")}
 dataset = load_dataset("csv", data_files=paths, delimiter="\t")
 
@@ -76,11 +75,6 @@ tokenized_dataset = dataset.map(preprocess_function,
                                 remove_columns=dataset["train"].column_names)
 print(f"Keys of tokenized dataset: {list(tokenized_dataset['train'].features)}")
 
-# save datasets to disk for later easy loading
-tokenized_dataset["train"].save_to_disk("data/train")
-tokenized_dataset["valid"].save_to_disk("data/eval")
-
-
 # load model from the hub
 model = AutoModelForSeq2SeqLM.from_pretrained(model_id, device_map="auto")
 # Define LoRA Config
@@ -117,7 +111,8 @@ training_args = Seq2SeqTrainingArguments(
     logging_dir=f"{output_dir}/logs",
     logging_strategy="steps",
     logging_steps=500,
-    save_strategy="no",
+    save_strategy="epoch",
+    eval_strategy="epoch",
 )
 
 # Create Trainer instance
@@ -126,6 +121,7 @@ trainer = Seq2SeqTrainer(
     args=training_args,
     data_collator=data_collator,
     train_dataset=tokenized_dataset["train"],
+    eval_dataset=tokenized_dataset["valid"],
 )
 model.config.use_cache = False  # silence the warnings. Please re-enable for inference!
 
