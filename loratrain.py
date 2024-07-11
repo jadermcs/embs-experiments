@@ -82,7 +82,7 @@ model = AutoModelForSeq2SeqLM.from_pretrained(model_id, device_map="auto")
 lora_config = LoraConfig(
  r=16,
  lora_alpha=32,
- target_modules=["q", "v"],
+ target_modules="all_linear",
  lora_dropout=0.05,
  bias="none",
  task_type=TaskType.SEQ_2_SEQ_LM
