@@ -71,8 +71,8 @@ df = df.sample(frac=1.).drop(columns="meaning")
 df["answer"] = df.label.apply(
         lambda x: "richteg" if x == "identical" else "falsch")
 df["prompt"] = "Ass d'Bedeitung vun '" + df['lemma'] +\
-        "' an deenen zwee Sätz identesch? saz1: \"" + df['sentence1'] +\
-        "\" saz2: \"" + df['sentence2'] + "\""
+        "' an deenen zwee Sätz identesch? saz1: " + df['sentence1'] +\
+        " saz2: " + df['sentence2']
 train = df.iloc[:-1000]
 valid = df.iloc[-1000:-500]
 test = df.iloc[-500:]
