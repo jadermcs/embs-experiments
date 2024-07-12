@@ -15,7 +15,7 @@ print(f"Validation dataset size: {len(dataset['valid'])}")
 
 
 # Set model and load tokenizer
-model_id = "google/mt5-large"
+model_id = "google/mt5-xl"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 
 # The maximum total input sequence length after tokenization.
@@ -80,12 +80,12 @@ print(f"Keys of tokenized dataset: {list(tokenized_dataset['train'].features)}")
 model = AutoModelForSeq2SeqLM.from_pretrained(model_id, device_map="auto")
 # Define LoRA Config
 lora_config = LoraConfig(
- r=16,
- lora_alpha=32,
- target_modules="all_linear",
- lora_dropout=0.05,
- bias="none",
- task_type=TaskType.SEQ_2_SEQ_LM
+    r=16,
+    lora_alpha=32,
+    target_modules="all_linear",
+    lora_dropout=0.05,
+    bias="none",
+    task_type=TaskType.SEQ_2_SEQ_LM
 )
 # add LoRA adaptor
 model = get_peft_model(model, lora_config)
