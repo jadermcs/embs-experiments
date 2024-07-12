@@ -45,7 +45,7 @@ print(f"Max target length: {max_target_length}")
 
 def preprocess_function(sample, padding="max_length"):
     # add prefix to the input for t5
-    inputs = ["Sätz:\r\n" + item for item in sample["prompt"]]
+    inputs = sample["prompt"]
 
     # tokenize inputs
     model_inputs = tokenizer(inputs,
@@ -82,7 +82,7 @@ model = AutoModelForSeq2SeqLM.from_pretrained(model_id, device_map="auto")
 lora_config = LoraConfig(
     r=16,
     lora_alpha=32,
-    target_modules="all_linear",
+    target_modules="all-linear",
     lora_dropout=0.05,
     bias="none",
     task_type=TaskType.SEQ_2_SEQ_LM

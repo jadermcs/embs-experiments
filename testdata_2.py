@@ -68,11 +68,11 @@ print(matched_in)
 df = pd.concat([matched_in, matched_out.sample(matched_in.shape[0])],
                ignore_index=True)
 df = df.sample(frac=1.).drop(columns="meaning")
-df.label = df.label.apply(
+df["answer"] = df.label.apply(
         lambda x: "richteg" if x == "identical" else "falsch")
-df["prompt"] = "\"" + df['sentence1'] + "\"\r\n\r\n\"" + df['sentence2'] + "\""
-df["answer"] = "Ist d'Bedeitung vun '" + df['lemma'] +\
-        "' an deenen zwee Sätz identesch? " + df['label']
+df["prompt"] = "Ass d'Bedeitung vun '" + df['lemma'] +\
+        "' an deenen zwee Sätz identesch? saz1: \"" + df['sentence1'] +\
+        "\" saz2: \"" + df['sentence2'] + "\""
 train = df.iloc[:-1000]
 valid = df.iloc[-1000:-500]
 test = df.iloc[-500:]
