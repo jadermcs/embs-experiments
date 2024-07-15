@@ -84,7 +84,6 @@ lora_config = LoraConfig(
     lora_alpha=32,
     target_modules="all-linear",
     lora_dropout=0.05,
-    bias="none",
     task_type=TaskType.SEQ_2_SEQ_LM
 )
 # add LoRA adaptor
@@ -101,7 +100,7 @@ data_collator = DataCollatorForSeq2Seq(
     pad_to_multiple_of=8
 )
 
-metric = evaluate.load("accuracy")
+metric = evaluate.combine(["accuracy", "f1", "precision", "recall"])
 
 
 def compute_metrics(eval_pred):
