@@ -14,7 +14,6 @@ data = []
 
 for entry in root:
     lemma = entry.find("./lemma").text
-    print(lemma)
     for meaning in entry.findall("./microStructure/grammaticalUnit/meaning"):
         for e in meaning.findall("./examples/example/text"):
             string = ""
