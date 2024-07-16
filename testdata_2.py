@@ -1,12 +1,10 @@
 # This task involves prediction if a sentence has identical or different
 # meaning compared to other sentence.
-
 import xml.etree.ElementTree as ET
 import pandas as pd
 import numpy as np
 
 np.random.seed(42)
-
 
 tree = ET.parse('new_lod-art.xml')
 root = tree.getroot()
@@ -29,49 +27,19 @@ for entry in root:
                 "sentence": string})
 
 
-def match_sentences(df):
-    results = []
-    for main_group, main_df in df.groupby('lemma'):
-        all_sentences = set(main_df['sentence'])
-        for sub_group, sub_df in main_df.groupby('meaning'):
-            sub_sentences = set(sub_df['sentence'])
-            outside_sentences = all_sentences - sub_sentences
-            for sentence in sub_sentences:
-                for outside_sentence in outside_sentences:
-                    results.append({
-                        'lemma': main_group,
-                        'meaning': sub_group,
-                        'sentence1': sentence,
-                        'sentence2': outside_sentence
-                    })
-    return pd.DataFrame(results)
-
-
 df = pd.DataFrame(data).sample(frac=1.)
-matched_out = match_sentences(df).groupby("lemma").sample(1)
-matched_out["label"] = "different"
-words = set(matched_out.lemma.values)
-print(matched_out)
-matched_in = df.groupby(["lemma", "meaning"]).agg(lambda x: list(x)[:2]).reset_index()
-matched_in = matched_in[[len(x) > 1 for x in matched_in.meaning.values.tolist()]]
-matched_in = pd.concat([
-    matched_in.drop(columns="sentence"),
-    pd.DataFrame(
-        matched_in['sentence'].values.tolist(),
-        columns=["sentence1", "sentence2"])
-    ], axis=1)
-matched_in = matched_in[~matched_in.sentence2.isna() & matched_in.lemma.isin(words)]
-matched_in = matched_in.groupby("lemma").sample(1)
-matched_in["label"] = "identical"
-print(matched_in)
-df = pd.concat([matched_in, matched_out.sample(matched_in.shape[0])],
-               ignore_index=True)
-df = df.sample(frac=1.).drop(columns="meaning")
+df = pd.merge(df, df, on="lemma", suffixes=("_1", "_2"))
+df = df[df.sentence_1 != df.sentence_2]
+df.to_csv("data.csv", sep="\t", index=False)
+df["label"] = df.apply(
+    lambda x: "identical" if x["meaning_1"] == x["meaning_2"] else "different",
+    axis=1)
+df = df.drop(columns=["meaning_1", "meaning_2"])
 df["answer"] = df.label.apply(
         lambda x: "richteg" if x == "identical" else "falsch")
 df["prompt"] = "Ass d'Bedeitung vun '" + df['lemma'] +\
-        "' an deenen zwee Sätz identesch? saz1: " + df['sentence1'] +\
-        " saz2: " + df['sentence2']
+        "' an deenen zwee Sätz identesch? saz1: " + df['sentence_1'] +\
+        " saz2: " + df['sentence_2']
 train = df.iloc[:-1000]
 valid = df.iloc[-1000:-500]
 test = df.iloc[-500:]

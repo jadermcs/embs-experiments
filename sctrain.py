@@ -17,8 +17,8 @@ def convert_labels(example):
     if not example["lemma"]:
         example["lemma"] = "null"
     try:
-        example["text"] = example["sentence1"] + "</s></s>" + \
-            example["sentence2"] + "</s/s>" + example["lemma"]
+        example["text"] = example["sentence_1"] + "</s></s>" + \
+            example["sentence_2"] + "</s/s>" + example["lemma"]
     except:
         print(example)
         exit()
@@ -27,7 +27,7 @@ def convert_labels(example):
 
 dataset = dataset.map(
         convert_labels,
-        remove_columns=["prompt", "answer", "sentence1", "sentence2", "lemma"])
+        remove_columns=["prompt", "answer", "sentence_1", "sentence_2", "lemma"])
 
 print(f"Train dataset size: {len(dataset['train'])}")
 print(f"Validation dataset size: {len(dataset['valid'])}")
