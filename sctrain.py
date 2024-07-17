@@ -14,7 +14,7 @@ dataset = load_dataset("csv", data_files=paths, delimiter="\t")
 def convert_labels(example):
     example["label"] = int(example["label"] == "identical")
     # dataset is changing the lema 'null' to None
-    if not example["lemma"]:
+    if not example["lemma"] and "null" in example["sentence_1"]:
         example["lemma"] = "null"
     try:
         example["text"] = example["sentence_1"] + "</s></s>" + \
@@ -100,8 +100,12 @@ output_dir = "lora-xlmr"
 training_args = TrainingArguments(
     output_dir=output_dir,
     auto_find_batch_size=True,
-    learning_rate=1e-5,
+    per_device_train_batch_size=32,
+    per_device_eval_batch_size=32,
+    learning_rate=2e-5,
     num_train_epochs=5,
+    warmup_steps=2000,
+    weight_decay=0.1,
     logging_dir=f"{output_dir}/logs",
     logging_strategy="steps",
     logging_steps=500,
@@ -119,7 +123,6 @@ trainer = Trainer(
     eval_dataset=tokenized_dataset["valid"],
     compute_metrics=compute_metrics,
 )
-model.config.use_cache = False  # silence the warnings. Please re-enable for inference!
 
 # train model
 trainer.train()
