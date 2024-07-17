@@ -99,9 +99,8 @@ output_dir = "lora-xlmr"
 # Define training args
 training_args = TrainingArguments(
     output_dir=output_dir,
-    auto_find_batch_size=True,
-    per_device_train_batch_size=32,
-    per_device_eval_batch_size=32,
+    per_device_train_batch_size=64,
+    per_device_eval_batch_size=64,
     learning_rate=2e-5,
     num_train_epochs=5,
     warmup_steps=2000,
