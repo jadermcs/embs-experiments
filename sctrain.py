@@ -107,6 +107,7 @@ training_args = TrainingArguments(
     logging_steps=500,
     save_strategy="epoch",
     eval_strategy="epoch",
+    report_to="mlflow",
 )
 
 # Create Trainer instance
