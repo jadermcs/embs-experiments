@@ -3,7 +3,7 @@ import evaluate
 from datasets import load_dataset, concatenate_datasets
 from peft import LoraConfig, get_peft_model, TaskType
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-from transformers import DataCollatorWithPadding
+from transformers import DataCollatorWithPadding, EarlyStoppingCallback
 from transformers import Trainer, TrainingArguments
 
 # Load dataset
@@ -104,13 +104,16 @@ training_args = TrainingArguments(
     learning_rate=2e-5,
     num_train_epochs=5,
     warmup_steps=2000,
-    weight_decay=0.1,
+    weight_decay=0.01,
     logging_dir=f"{output_dir}/logs",
     logging_strategy="steps",
     logging_steps=500,
     save_strategy="epoch",
     eval_strategy="epoch",
     report_to="mlflow",
+    save_total_limit=5,
+    metric_for_best_model="f1",
+    load_best_model_at_end=True,
 )
 
 # Create Trainer instance
@@ -121,7 +124,9 @@ trainer = Trainer(
     train_dataset=tokenized_dataset["train"],
     eval_dataset=tokenized_dataset["valid"],
     compute_metrics=compute_metrics,
+    callbacks=[EarlyStoppingCallback(early_stopping_patience=5)],
 )
 
 # train model
 trainer.train()
+trainer.save_model()
