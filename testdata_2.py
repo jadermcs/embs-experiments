@@ -40,9 +40,10 @@ df["answer"] = df.label.apply(
 df["prompt"] = "Ass d'Bedeitung vun '" + df['lemma'] +\
         "' an deenen zwee Sätz identesch? saz1: " + df['sentence_1'] +\
         " saz2: " + df['sentence_2']
-train = df.iloc[:-1000]
-valid = df.iloc[-1000:-500]
-test = df.iloc[-500:]
+test_words = np.random.choice(df.lemma.unique(), 20)
+train = df[~df.lemma.isin(test_words)].iloc[:-1000]
+valid = df[~df.lemma.isin(test_words)].iloc[-1000]
+test = df[df.lemma.isin(test_words)]
 
 df.to_csv("data/dimension.complete.csv", sep="\t", index=False)
 train.to_csv("data/dimension.train.csv", sep="\t", index=False)
