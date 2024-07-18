@@ -45,10 +45,12 @@ df["answer"] = df.label.apply(
 df["prompt"] = "Ass d'Bedeitung vun '" + df['lemma'] +\
         "' an deenen zwee Sätz identesch? saz1: " + df['sentence_1'] +\
         " saz2: " + df['sentence_2']
-test_words = np.random.choice(df.lemma.unique(), 50)
-train = df[~df.lemma.isin(test_words)].iloc[:-1000]
+test_words = np.random.choice(df.lemma.unique(), 55)
+train = df[~df.lemma.isin(test_words)]
+valid_words = np.random.choice(train.lemma.unique(), 55)
+train = train[~train.lemma.isin(valid_words)]
 print("Train size:", train.shape[0])
-valid = df[~df.lemma.isin(test_words)].iloc[-1000:]
+valid = df[df.lemma.isin(valid_words)]
 print("Validation size:", valid.shape[0])
 test = df[df.lemma.isin(test_words)]
 print("Test size:", test.shape[0])
