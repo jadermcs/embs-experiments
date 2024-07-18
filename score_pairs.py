@@ -1,10 +1,9 @@
 import numpy as np
 import evaluate
+import torch
+from tqdm import tqdm
 from datasets import load_dataset, concatenate_datasets
-from peft import LoraConfig, get_peft_model, TaskType
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-from transformers import DataCollatorWithPadding, EarlyStoppingCallback
-from transformers import Trainer, TrainingArguments
 
 # Load dataset
 paths = {x: f"data/dimension.{x}.csv" for x in ("train", "valid", "test")}
@@ -63,70 +62,40 @@ id2label = {0: "different", 1: "identical"}
 label2id = {"different": 0, "identical": 1}
 # load model from the hub
 model = AutoModelForSequenceClassification.from_pretrained(
-        model_id,
-        num_labels=2,
+        "lora-xlmr",
         id2label=id2label,
         label2id=label2id,
         device_map="auto")
-# Define LoRA Config
-lora_config = LoraConfig(
-    r=16,
-    lora_alpha=32,
-    target_modules="all-linear",
-    lora_dropout=0.05,
-    task_type=TaskType.SEQ_CLS
-)
-# add LoRA adaptor
-# model = get_peft_model(model, lora_config)
-# model.print_trainable_parameters()
+model.eval()
 
 # Data collator
-data_collator = DataCollatorWithPadding(tokenizer)
-
 metric = evaluate.combine(["accuracy", "f1", "precision", "recall"])
 
 
 def compute_metrics(eval_pred):
     preds, labels = eval_pred
-    preds = np.argmax(preds, axis=1)
-
     result = metric.compute(predictions=preds, references=labels)
     return result
 
 
-output_dir = "lora-xlmr"
+predictions, true_labels = [], []
 
-# Define training args
-training_args = TrainingArguments(
-    output_dir=output_dir,
-    per_device_train_batch_size=64,
-    per_device_eval_batch_size=64,
-    learning_rate=2e-5,
-    num_train_epochs=5,
-    warmup_steps=2000,
-    weight_decay=0.01,
-    logging_dir=f"{output_dir}/logs",
-    logging_strategy="steps",
-    logging_steps=500,
-    save_strategy="epoch",
-    eval_strategy="epoch",
-    report_to="mlflow",
-    save_total_limit=5,
-    metric_for_best_model="f1",
-    load_best_model_at_end=True,
-)
 
-# Create Trainer instance
-trainer = Trainer(
-    model=model,
-    args=training_args,
-    data_collator=data_collator,
-    train_dataset=tokenized_dataset["train"],
-    eval_dataset=tokenized_dataset["valid"],
-    compute_metrics=compute_metrics,
-    callbacks=[EarlyStoppingCallback(early_stopping_patience=5)],
-)
+def prepare_input(x):
+    return torch.tensor(x).to(model.device).unsqueeze(0)
 
-# train model
-trainer.train()
-trainer.save_model()
+
+# Disable gradient calculation for efficiency
+for example in tqdm(dataset["test"]):
+    inputs = tokenize(example)
+    inputs = {k: prepare_input(v) for k, v in inputs.items() if k != 'label'}
+    with torch.no_grad():
+        outputs = model(**inputs)
+    logits = outputs.logits
+    preds = torch.argmax(logits, dim=-1).cpu().numpy()
+    labels = [example['label']]
+
+    predictions.extend(preds)
+    true_labels.extend(labels)
+
+print(compute_metrics((predictions, true_labels)))

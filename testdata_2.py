@@ -7,6 +7,7 @@ import numpy as np
 np.random.seed(42)
 
 tree = ET.parse('new_lod-art.xml')
+words = set()
 root = tree.getroot()
 data = []
 
@@ -21,11 +22,15 @@ for entry in root:
                     continue
                 string += text
                 string += "" if text.endswith("'") else " "
+            words.add(lemma)
             data.append({
                 "lemma": lemma,
                 "meaning": meaning.attrib["id"],
                 "sentence": string})
 
+with open("words_lod.txt", "w+") as fout:
+    for w in words:
+        fout.write(w+"\n")
 
 df = pd.DataFrame(data).sample(frac=1.)
 df = pd.merge(df, df, on="lemma", suffixes=("_1", "_2"))
