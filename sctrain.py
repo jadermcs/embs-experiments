@@ -17,8 +17,9 @@ def convert_labels(example):
     if not example["lemma"] and "null" in example["sentence_1"]:
         example["lemma"] = "null"
     try:
-        example["text"] = example["sentence_1"] + "</s></s>" + \
-            example["sentence_2"] + "</s></s>" + example["lemma"]
+        example["text"] = "</s></s>".join([
+            example["lemma"], example["sentence_1"], example["sentence_2"]
+            ])
     except:
         print(example)
         exit()
