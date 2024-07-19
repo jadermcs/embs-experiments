@@ -35,7 +35,7 @@ print(f"Validation dataset size: {len(dataset['valid'])}")
 
 
 # Set model and load tokenizer
-model_id = "FacebookAI/xlm-roberta-base"
+model_id = "FacebookAI/xlm-roberta-large"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 
 
@@ -78,8 +78,8 @@ lora_config = LoraConfig(
     task_type=TaskType.SEQ_CLS
 )
 # add LoRA adaptor
-# model = get_peft_model(model, lora_config)
-# model.print_trainable_parameters()
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()
 
 # Data collator
 data_collator = DataCollatorWithPadding(tokenizer)
@@ -112,7 +112,7 @@ training_args = TrainingArguments(
     save_strategy="epoch",
     eval_strategy="epoch",
     report_to="mlflow",
-    save_total_limit=5,
+    save_total_limit=10,
     metric_for_best_model="f1",
     load_best_model_at_end=True,
 )
@@ -125,7 +125,7 @@ trainer = Trainer(
     train_dataset=tokenized_dataset["train"],
     eval_dataset=tokenized_dataset["valid"],
     compute_metrics=compute_metrics,
-    callbacks=[EarlyStoppingCallback(early_stopping_patience=5)],
+    callbacks=[EarlyStoppingCallback(early_stopping_patience=10)],
 )
 
 # train model
