@@ -69,17 +69,6 @@ model = AutoModelForSequenceClassification.from_pretrained(
         id2label=id2label,
         label2id=label2id,
         device_map="auto")
-# Define LoRA Config
-lora_config = LoraConfig(
-    r=16,
-    lora_alpha=32,
-    target_modules="all-linear",
-    lora_dropout=0.05,
-    task_type=TaskType.SEQ_CLS
-)
-# add LoRA adaptor
-model = get_peft_model(model, lora_config)
-model.print_trainable_parameters()
 
 # Data collator
 data_collator = DataCollatorWithPadding(tokenizer)
