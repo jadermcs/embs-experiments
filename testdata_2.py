@@ -15,17 +15,19 @@ for entry in root:
     lemma = entry.find("./lemma").text
     for meaning in entry.findall("./microStructure/grammaticalUnit/meaning"):
         for e in meaning.findall("./examples/example/text"):
+            meaning_txt = meaning.attrib["id"]
             string = ""
             for i in e:
                 text = i.text
                 if text == "EGS":
+                    meaning_txt += "_EGS"
                     continue
                 string += text
                 string += "" if text.endswith("'") else " "
             words.add(lemma)
             data.append({
                 "lemma": lemma,
-                "meaning": meaning.attrib["id"],
+                "meaning": meaning_txt,
                 "sentence": string})
 
 with open("words_lod.txt", "w+") as fout:
